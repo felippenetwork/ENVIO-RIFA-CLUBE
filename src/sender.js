@@ -55,9 +55,8 @@ async function sendMedia(sock, jid, filePath) {
 }
 
 async function sendMessageWithButtons(sock, jid, text, btn1, btn2) {
-  const fullText = `${text}\n\n👇 *${btn1}*\n${GROUP_LINK}`;
   try {
-    await sock.sendMessage(jid, { text: fullText });
+    await sock.sendMessage(jid, { text });
     log(`Mensagem enviada → ${jid}`);
   } catch (err) {
     log(`Erro ao enviar mensagem: ${err.message}`, 'ERROR');
