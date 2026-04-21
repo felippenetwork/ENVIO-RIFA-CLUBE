@@ -1,5 +1,6 @@
 require('dotenv').config();
 const fs = require('fs');
+const { generateWAMessageFromContent, proto } = require('@whiskeysockets/baileys');
 const { getRandomMessage, getRandomBtn1, getRandomBtn2 } = require('./messages');
 const { markAsSent } = require('./sheets');
 const {
@@ -56,28 +57,34 @@ async function sendMedia(sock, jid, filePath) {
 
 async function sendMessageWithButtons(sock, jid, text, btn1, btn2) {
   try {
-    await sock.sendMessage(jid, {
-      templateMessage: {
-        hydratedTemplate: {
-          hydratedContentText: text,
-          hydratedFooterText: 'Rifas Clube do Churrasco',
-          hydratedButtons: [
+    const msg = generateWAMessageFromContent(jid, {
+      interactiveMessage: proto.Message.InteractiveMessage.create({
+        body: proto.Message.InteractiveMessage.Body.create({ text }),
+        footer: proto.Message.InteractiveMessage.Footer.create({ text: 'Rifas Clube do Churrasco' }),
+        header: proto.Message.InteractiveMessage.Header.create({ hasMediaAttachment: false }),
+        nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
+          buttons: [
             {
-              urlButton: {
-                displayText: btn1,
-                url: GROUP_LINK
-              }
+              name: 'cta_url',
+              buttonParamsJson: JSON.stringify({
+                display_text: btn1,
+                url: GROUP_LINK,
+                merchant_url: GROUP_LINK
+              })
             },
             {
-              quickReplyButton: {
-                displayText: btn2,
+              name: 'quick_reply',
+              buttonParamsJson: JSON.stringify({
+                display_text: btn2,
                 id: 'passar_' + Date.now()
-              }
+              })
             }
           ]
-        }
-      }
-    });
+        })
+      })
+    }, { userJid: sock.user.jid });
+
+    await sock.relayMessage(jid, msg.message, { messageId: msg.key.id });
     log(`Mensagem + botões enviada → ${jid}`);
   } catch (err) {
     log(`Erro ao enviar mensagem com botões: ${err.message}`, 'ERROR');
