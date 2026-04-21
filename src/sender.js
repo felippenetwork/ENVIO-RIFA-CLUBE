@@ -1,6 +1,5 @@
 require('dotenv').config();
 const fs = require('fs');
-const { generateWAMessageFromContent, proto } = require('@whiskeysockets/baileys');
 const { getRandomMessage, getRandomBtn1, getRandomBtn2 } = require('./messages');
 const { markAsSent } = require('./sheets');
 const {
@@ -56,45 +55,12 @@ async function sendMedia(sock, jid, filePath) {
 }
 
 async function sendMessageWithButtons(sock, jid, text, btn1, btn2) {
+  const fullText = `${text}\n\n👇 *${btn1}*\n${GROUP_LINK}`;
   try {
-    const msg = generateWAMessageFromContent(jid, {
-      interactiveMessage: proto.Message.InteractiveMessage.create({
-        body: proto.Message.InteractiveMessage.Body.create({ text }),
-        footer: proto.Message.InteractiveMessage.Footer.create({ text: 'Rifas Clube do Churrasco' }),
-        header: proto.Message.InteractiveMessage.Header.create({ hasMediaAttachment: false }),
-        nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
-          buttons: [
-            {
-              name: 'cta_url',
-              buttonParamsJson: JSON.stringify({
-                display_text: btn1,
-                url: GROUP_LINK,
-                merchant_url: GROUP_LINK
-              })
-            },
-            {
-              name: 'quick_reply',
-              buttonParamsJson: JSON.stringify({
-                display_text: btn2,
-                id: 'passar_' + Date.now()
-              })
-            }
-          ]
-        })
-      })
-    }, { userJid: sock.user.jid });
-
-    await sock.relayMessage(jid, msg.message, { messageId: msg.key.id });
-    log(`Mensagem + botões enviada → ${jid}`);
+    await sock.sendMessage(jid, { text: fullText });
+    log(`Mensagem enviada → ${jid}`);
   } catch (err) {
-    log(`Erro ao enviar mensagem com botões: ${err.message}`, 'ERROR');
-    // Fallback: envia só texto se botões falharem
-    try {
-      await sock.sendMessage(jid, { text: text + `\n\n👉 ${GROUP_LINK}` });
-      log(`Fallback texto enviado → ${jid}`);
-    } catch (err2) {
-      log(`Fallback também falhou: ${err2.message}`, 'ERROR');
-    }
+    log(`Erro ao enviar mensagem: ${err.message}`, 'ERROR');
   }
 }
 
