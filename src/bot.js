@@ -7,6 +7,7 @@ const {
   makeCacheableSignalKeyStore
 } = require('@whiskeysockets/baileys');
 const pino = require('pino');
+const qrcode = require('qrcode-terminal');
 const path = require('path');
 const { log } = require('./utils');
 const scheduler = require('./scheduler');
@@ -25,7 +26,6 @@ async function connectToWhatsApp() {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
     },
-    printQRInTerminal: true,
     logger: pino({ level: 'silent' }),
     browser: ['Rifas Clube do Churrasco', 'Chrome', '120.0.0'],
     markOnlineOnConnect: true,
@@ -37,6 +37,7 @@ async function connectToWhatsApp() {
   sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
     if (qr) {
       log('QR Code gerado. Escaneie com seu WhatsApp!');
+      qrcode.generate(qr, { small: true });
     }
 
     if (connection === 'close') {
