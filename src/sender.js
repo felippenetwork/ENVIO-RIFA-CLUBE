@@ -94,6 +94,9 @@ async function sendToContact(contact, sock) {
     await sock.sendPresenceUpdate('available', jid);
     await wait(randomBetween(800, 1800));
 
+    // 4. Desativar mensagem temporária antes do envio
+    await sock.sendMessage(jid, { disappearingMessagesInChat: 0 });
+    log(`Mensagem temporária desativada → ${name}`);
     await wait(randomBetween(1000, 2500));
 
     // 5. Enviar mídias da pasta /media
@@ -125,12 +128,7 @@ async function sendToContact(contact, sock) {
     const btn2 = getRandomBtn2();
     await sendMessageWithButtons(sock, jid, messageText, btn1, btn2);
 
-    // 9. Desativar mensagem temporária
-    await wait(randomBetween(1200, 2500));
-    await sock.sendMessage(jid, { disappearingMessagesInChat: 0 });
-    log(`Mensagem temporária desativada → ${name}`);
-
-    // 10. Marcar como enviado na planilha
+    // 9. Marcar como enviado na planilha
     await markAsSent(row);
 
     dailySentCount++;
