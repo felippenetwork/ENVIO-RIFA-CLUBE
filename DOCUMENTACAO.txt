@@ -1,0 +1,300 @@
+=============================================
+  BOT WHATSAPP - RIFAS CLUBE DO CHURRASCO
+  Versão: 1.0.0
+  Criado em: Abril/2026
+=============================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  O QUE É ESTE BOT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Bot de disparo automático para WhatsApp usando a biblioteca
+Baileys (Node.js). Ele lê uma planilha do Google Sheets,
+pega os contatos pendentes e envia mensagens personalizadas
+com botões de ação, simulando comportamento humano para
+reduzir risco de bloqueio.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ESTRUTURA DE ARQUIVOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+bot-rifa-clube/
+├── src/
+│   ├── bot.js          → Arquivo principal. Conecta ao WhatsApp via QR Code.
+│   ├── scheduler.js    → Faz o polling da planilha a cada 45-75 segundos.
+│   ├── sender.js       → Toda a lógica de envio (delay, digitação, mídia, botões).
+│   ├── sheets.js       → Integração com Google Sheets via App Script.
+│   ├── messages.js     → Gerador de mensagens com 200+ variações de emojis e textos.
+│   └── utils.js        → Funções auxiliares (horário Brasília, delay, formatação).
+│
+├── media/              → Coloque aqui as mídias que serão enviadas antes da mensagem.
+│                         O bot detecta o tipo automaticamente (foto, vídeo ou áudio).
+│                         Pasta vazia = envia só texto + botões.
+│
+├── auth/               → Sessão do WhatsApp salva automaticamente após o primeiro login.
+│                         NÃO apague esta pasta (a não ser que queira reconectar).
+│
+├── logs/               → Arquivo bot.log gerado automaticamente com todos os eventos.
+│
+├── appscript/
+│   └── Code.gs         → Código para colar no Google Apps Script da planilha.
+│
+├── .env                → Suas configurações pessoais (criar a partir do .env.example).
+├── .env.example        → Modelo de configurações.
+├── package.json        → Dependências do projeto.
+└── DOCUMENTACAO.txt    → Este arquivo.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  O QUE TEM NO BOT (FUNCIONALIDADES)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. LEITURA DA PLANILHA
+   - Lê a aba "DISPARO" do Google Sheets a cada 45 a 75 segundos (aleatório).
+   - Pega linhas onde STATUS está VAZIO (pendentes).
+   - Colunas usadas: NOME | NUMERO | STATUS | OBS | ENVIADO_EM
+
+2. FILA DE ENVIO
+   - Contatos são colocados em fila e processados um a um.
+   - Garante que não há envios simultâneos (evita bloqueio).
+
+3. DELAY ALEATÓRIO ENTRE ENVIOS
+   - Mínimo: 35 segundos
+   - Máximo: 250 segundos
+   - Valor sorteado aleatoriamente a cada envio.
+
+4. HORÁRIO INTELIGENTE
+   - Só envia entre 08h e 20h (horário de Brasília).
+   - Fora desse horário, a fila fica pausada.
+
+5. LIMITE DIÁRIO
+   - Padrão: 150 envios por dia (configurável no .env).
+   - Reseta automaticamente à meia-noite.
+
+6. ENVIO DE MÍDIA (pasta /media)
+   - O bot envia TODOS os arquivos que estiverem na pasta /media.
+   - Suporta: imagem (.jpg, .png), vídeo (.mp4), áudio (.mp3, .ogg).
+   - Troca o arquivo para mudar a campanha, sem mexer no código.
+
+7. ATIVAÇÃO DE MENSAGEM TEMPORÁRIA
+   - Ao abrir a conversa, o bot ATIVA mensagens temporárias (90 dias).
+   - Após enviar a mensagem, DESATIVA automaticamente.
+   - Timer configurável no .env (DISAPPEARING_TIMER).
+
+8. SIMULAÇÃO DE COMPORTAMENTO HUMANO
+   - Fica "online" antes de digitar.
+   - Simula digitação DUPLA (digita → para → digita novamente).
+   - Tempo de digitação calculado pelo tamanho da mensagem.
+   - Aguarda 7 segundos antes de enviar.
+   - Marca mensagens recebidas como LIDAS automaticamente.
+
+9. MENSAGENS COM VARIAÇÕES (200+)
+   - Texto base personalizado com nome do contato.
+   - Período do dia automático (Bom dia / Boa tarde / Boa noite) pelo horário de Brasília.
+   - Emojis variam a cada envio (nunca a mesma combinação).
+
+10. DOIS BOTÕES POR MENSAGEM
+    - Botão 1: "🎟️ Participar Agora" → Abre link do grupo WhatsApp.
+    - Botão 2: "👋 Essa vou passar" → Responde no chat.
+    - Emojis dos botões variam a cada envio.
+
+11. ATUALIZAÇÃO AUTOMÁTICA DA PLANILHA
+    - Após enviar, o bot marca STATUS = ENVIADO e preenche ENVIADO_EM com data/hora.
+
+12. LOGS COMPLETOS
+    - Todos os eventos são registrados no console e no arquivo logs/bot.log.
+
+13. RECONEXÃO AUTOMÁTICA
+    - Se cair a conexão, o bot se reconecta automaticamente.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  FLUXO COMPLETO DE ENVIO (POR CONTATO)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [Planilha] → Contato pendente detectado
+       ↓
+  Aguarda delay aleatório (35s a 250s)
+       ↓
+  Verifica se está no horário (08h-20h Brasília)
+       ↓
+  Verifica se não atingiu limite diário
+       ↓
+  Fica ONLINE no WhatsApp
+       ↓
+  ATIVA mensagem temporária (90 dias)
+       ↓
+  Envia mídias da pasta /media (se houver)
+       ↓
+  Simula DIGITAÇÃO (online → digita → para → digita)
+       ↓
+  Aguarda 7 segundos
+       ↓
+  Envia MENSAGEM + 2 BOTÕES (variação aleatória)
+       ↓
+  DESATIVA mensagem temporária
+       ↓
+  Atualiza planilha: STATUS=ENVIADO + ENVIADO_EM
+       ↓
+  Aguarda próximo contato da fila
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CONFIGURAÇÕES (.env)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  SHEET_SCRIPT_URL  → URL do App Script publicado (obrigatório)
+  GROUP_LINK        → Link do grupo WhatsApp (botão 1)
+  DAILY_LIMIT       → Limite de envios por dia (padrão: 150)
+  MIN_DELAY         → Delay mínimo em ms (padrão: 35000 = 35s)
+  MAX_DELAY         → Delay máximo em ms (padrão: 250000 = 250s)
+  START_HOUR        → Hora de início dos envios (padrão: 8)
+  END_HOUR          → Hora de fim dos envios (padrão: 20)
+  DISAPPEARING_TIMER → Timer mensagem temporária em segundos
+                       86400=24h | 604800=7dias | 7776000=90dias
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PLANILHA - ESTRUTURA ESPERADA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Aba: DISPARO
+  Linha 1: cabeçalho (NOME | NUMERO | STATUS | OBS | ENVIADO_EM)
+  Linha 2+: dados dos contatos
+
+  STATUS vazio    → será enviado pelo bot
+  STATUS=ENVIADO  → bot ignora (já foi enviado)
+
+  Para novo disparo para os mesmos números:
+  → Na planilha, clique em "🔥 Bot Rifas" > "Limpar Status"
+  → Ou limpe manualmente a coluna STATUS e ENVIADO_EM
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PASSO A PASSO - CONFIGURAR APP SCRIPT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. Abra sua planilha no Google Sheets
+  2. Clique em "Extensões" > "Apps Script"
+  3. Apague o código padrão
+  4. Cole o conteúdo do arquivo appscript/Code.gs
+  5. Clique em "Salvar" (ícone de disquete)
+  6. Clique em "Implantar" > "Nova implantação"
+  7. Tipo: "App da Web"
+  8. Executar como: "Eu"
+  9. Quem pode acessar: "Qualquer pessoa"
+  10. Clique em "Implantar"
+  11. Copie a URL gerada
+  12. Cole essa URL no .env como SHEET_SCRIPT_URL
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PASSO A PASSO - INSTALAR E RODAR O BOT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  PRÉ-REQUISITOS:
+  → Node.js versão 18 ou superior instalado no servidor
+  → Acesso ao terminal/SSH do servidor
+
+  INSTALAÇÃO:
+
+  1. Faça upload do projeto para o servidor (via FTP, git, etc.)
+
+  2. Entre na pasta do projeto:
+     cd bot-rifa-clube
+
+  3. Instale as dependências:
+     npm install
+
+  4. Crie o arquivo .env a partir do exemplo:
+     cp .env.example .env
+
+  5. Edite o .env com suas configurações:
+     nano .env
+     (Preencha SHEET_SCRIPT_URL com a URL do App Script)
+
+  6. Inicie o bot:
+     npm start
+
+  7. Um QR Code aparecerá no terminal.
+     Abra o WhatsApp no celular:
+     → Configurações > Aparelhos conectados > Conectar aparelho
+     → Escaneie o QR Code
+
+  8. Após escanear, o bot conectará e iniciará automaticamente.
+
+  MANTER RODANDO 24/7 (recomendado com PM2):
+
+  npm install -g pm2
+  pm2 start src/bot.js --name "bot-rifas"
+  pm2 save
+  pm2 startup
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  COMO USAR NO DIA A DIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  NOVO DISPARO:
+  1. Adicione os nomes e números na planilha (aba DISPARO)
+  2. Deixe STATUS vazio
+  3. O bot detecta automaticamente e começa a enviar
+
+  NOVO DISPARO PARA OS MESMOS NÚMEROS:
+  1. Na planilha, clique em "🔥 Bot Rifas" > "Limpar Status"
+  2. Ou limpe manualmente a coluna C e E
+  3. O bot detectará e enviará novamente
+
+  TROCAR MÍDIA DA CAMPANHA:
+  1. Entre na pasta /media do servidor
+  2. Apague o arquivo antigo
+  3. Coloque o novo arquivo (foto, vídeo ou áudio)
+  4. O bot já usa o novo arquivo no próximo envio
+
+  PAUSAR O BOT:
+  → pm2 stop bot-rifas
+
+  RETOMAR O BOT:
+  → pm2 start bot-rifas
+
+  VER LOGS EM TEMPO REAL:
+  → pm2 logs bot-rifas
+  → ou: tail -f logs/bot.log
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  DICAS ANTI-BLOQUEIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  → Use um número de WhatsApp com pelo menos 7 dias de uso
+  → Configure foto de perfil e recado no número
+  → Não comece com muitos envios: inicie com 20-30/dia
+  → Vá aumentando gradualmente semana a semana
+  → Nunca envie para números que bloquearam você
+  → Evite enviar para muitos números novos (sem histórico)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  HISTÓRICO DE ALTERAÇÕES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  v1.0.0 - Abril/2026
+  → Criação inicial do bot
+  → Integração com Google Sheets via App Script
+  → 200+ variações de mensagem com emojis
+  → Personalização por nome e período do dia
+  → Simulação de digitação dupla
+  → Mensagem temporária ativa/desativa automático
+  → Envio de mídia por pasta /media
+  → Dois botões (URL + resposta rápida)
+  → Delay aleatório 35s a 250s
+  → Horário de envio 08h-20h Brasília
+  → Limite diário configurável (padrão 150)
+  → Reconexão automática
+  → Logs completos em arquivo e console
+  → Menu personalizado na planilha (Limpar Status)
+
+  [Novas alterações serão registradas aqui]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SUPORTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Qualquer dúvida ou problema, verifique primeiro:
+  → O arquivo logs/bot.log
+  → Se o .env está preenchido corretamente
+  → Se o App Script foi publicado como "Qualquer pessoa"
+  → Se a sessão do WhatsApp está ativa (pasta /auth)
+
+=============================================
