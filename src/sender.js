@@ -10,6 +10,7 @@ const {
 
 const MIN_DELAY = parseInt(process.env.MIN_DELAY || '35000');
 const MAX_DELAY = parseInt(process.env.MAX_DELAY || '250000');
+const MAX_RETRIES = 2;
 
 let dailySentCount = 0;
 let lastResetDate = new Date().toDateString();
@@ -61,7 +62,7 @@ async function sendText(sock, jid, text) {
   }
 }
 
-async function sendToContact(contact, sock) {
+async function sendToContact(contact, sock, attempt = 1) {
   checkDailyReset();
 
   const dailyLimit = parseInt(process.env.DAILY_LIMIT || '150');
@@ -80,12 +81,18 @@ async function sendToContact(contact, sock) {
     return false;
   }
 
-  // 2. Delay aleatório antes de iniciar
-  const delay = randomBetween(MIN_DELAY, MAX_DELAY);
-  log(`Aguardando ${Math.round(delay / 1000)}s antes de enviar para ${name} (${numero})`);
-  await wait(delay);
+  // 2. Delay aleatório antes de iniciar (apenas na primeira tentativa)
+  if (attempt === 1) {
+    const delay = randomBetween(MIN_DELAY, MAX_DELAY);
+    log(`Aguardando ${Math.round(delay / 1000)}s antes de enviar para ${name} (${numero})`);
+    await wait(delay);
+  }
 
-  log(`Iniciando envio para: ${name} (${numero})`);
+  if (attempt > 1) {
+    log(`Retentativa ${attempt}/${MAX_RETRIES + 1} para ${name}...`, 'WARN');
+  } else {
+    log(`Iniciando envio para: ${name} (${numero})`);
+  }
 
   try {
     // 3. Ficar online
@@ -132,7 +139,16 @@ async function sendToContact(contact, sock) {
     return true;
 
   } catch (err) {
-    log(`Erro no envio para ${name} (${numero}): ${err.message}`, 'ERROR');
+    log(`Erro no envio para ${name} (tentativa ${attempt}): ${err.message}`, 'ERROR');
+
+    if (attempt <= MAX_RETRIES) {
+      const retryDelay = attempt * 15000;
+      log(`Aguardando ${retryDelay / 1000}s antes de retentar...`, 'WARN');
+      await wait(retryDelay);
+      return sendToContact(contact, sock, attempt + 1);
+    }
+
+    log(`Desistindo após ${attempt} tentativas para ${name}.`, 'ERROR');
     return false;
   }
 }
