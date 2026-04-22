@@ -10,6 +10,7 @@ const MAX_POLL = 75000;
 let processing = false;
 let sock = null;
 let queue = [];
+let started = false;
 
 function setSock(s) {
   sock = s;
@@ -71,6 +72,11 @@ async function pollSheets() {
 
 function start(sockInstance) {
   setSock(sockInstance);
+  if (started) {
+    log('Scheduler já ativo. Socket atualizado.');
+    return;
+  }
+  started = true;
   log('Scheduler iniciado. Primeira verificação em 5s...');
   setTimeout(pollSheets, 5000);
 }
