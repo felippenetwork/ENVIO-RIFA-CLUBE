@@ -1,6 +1,7 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+const mime = require('mime-types');
 
 function getBrasiliaHour() {
   const now = new Date();
@@ -35,6 +36,21 @@ function formatNumber(number) {
   let num = String(number).replace(/\D/g, '');
   if (num.startsWith('0')) num = num.slice(1);
   if (!num.startsWith('55')) num = '55' + num;
+
+  // Números brasileiros com DDD: 55 + 2 (DDD) + 8 ou 9 dígitos = 12 ou 13 dígitos
+  // Se tiver 12 dígitos e o 5º dígito não for 9, pode ser celular sem o nono dígito
+  if (num.length === 12) {
+    const quintoDigito = num[4];
+    if (['6', '7', '8', '9'].includes(quintoDigito)) {
+      num = num.slice(0, 4) + '9' + num.slice(4);
+      log(`Nono dígito adicionado ao número: ${number} → ${num}`);
+    }
+  }
+
+  if (num.length < 12 || num.length > 13) {
+    log(`Número com formato inválido ignorado: ${number} (${num.length} dígitos)`, 'WARN');
+  }
+
   return num + '@s.whatsapp.net';
 }
 
@@ -52,7 +68,6 @@ function getMediaFiles() {
 }
 
 function getMediaType(filePath) {
-  const mime = require('mime-types');
   const mimeType = mime.lookup(filePath) || '';
   if (mimeType.startsWith('image/')) return 'image';
   if (mimeType.startsWith('video/')) return 'video';

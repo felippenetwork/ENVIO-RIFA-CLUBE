@@ -3,3 +3,4 @@ auth/
 logs/
 .env
 *.log
+queue.json
