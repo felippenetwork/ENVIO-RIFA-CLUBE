@@ -1,6 +1,6 @@
 require('dotenv').config();
 const fs = require('fs');
-const { getRandomMessage, getRandomBtn1, getRandomBtn2 } = require('./messages');
+const { getRandomMessage } = require('./messages');
 const { markAsSent } = require('./sheets');
 const {
   wait, randomBetween, formatNumber,
@@ -8,8 +8,6 @@ const {
   isWithinAllowedHours, log
 } = require('./utils');
 
-const GROUP_LINK = process.env.GROUP_LINK || 'https://chat.whatsapp.com/FG1hAPfo12e8AJOydKTnKs';
-const DISAPPEARING_TIMER = parseInt(process.env.DISAPPEARING_TIMER || '7776000');
 const MIN_DELAY = parseInt(process.env.MIN_DELAY || '35000');
 const MAX_DELAY = parseInt(process.env.MAX_DELAY || '250000');
 
@@ -54,7 +52,7 @@ async function sendMedia(sock, jid, filePath) {
   }
 }
 
-async function sendMessageWithButtons(sock, jid, text, btn1, btn2) {
+async function sendText(sock, jid, text) {
   try {
     await sock.sendMessage(jid, { text });
     log(`Mensagem enviada → ${jid}`);
@@ -76,16 +74,16 @@ async function sendToContact(contact, sock) {
   const jid = formatNumber(numero);
   const name = nome || 'amigo(a)';
 
-  // 1. Delay aleatório antes de iniciar
-  const delay = randomBetween(MIN_DELAY, MAX_DELAY);
-  log(`Aguardando ${Math.round(delay / 1000)}s antes de enviar para ${name} (${numero})`);
-  await wait(delay);
-
-  // 2. Verificar horário permitido após o delay
+  // 1. Verificar horário antes do delay para não perder o contato da fila
   if (!isWithinAllowedHours()) {
     log(`Fora do horário permitido (08h-20h). Pulando ${name}.`, 'WARN');
     return false;
   }
+
+  // 2. Delay aleatório antes de iniciar
+  const delay = randomBetween(MIN_DELAY, MAX_DELAY);
+  log(`Aguardando ${Math.round(delay / 1000)}s antes de enviar para ${name} (${numero})`);
+  await wait(delay);
 
   log(`Iniciando envio para: ${name} (${numero})`);
 
@@ -123,10 +121,8 @@ async function sendToContact(contact, sock) {
     // 7. Aguardar 7 segundos finais antes de enviar
     await wait(7000);
 
-    // 8. Enviar mensagem + botões
-    const btn1 = getRandomBtn1();
-    const btn2 = getRandomBtn2();
-    await sendMessageWithButtons(sock, jid, messageText, btn1, btn2);
+    // 8. Enviar mensagem
+    await sendText(sock, jid, messageText);
 
     // 9. Marcar como enviado na planilha
     await markAsSent(row);

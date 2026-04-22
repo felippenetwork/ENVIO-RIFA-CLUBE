@@ -1,6 +1,7 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+const mime = require('mime-types');
 
 function getBrasiliaHour() {
   const now = new Date();
@@ -52,7 +53,6 @@ function getMediaFiles() {
 }
 
 function getMediaType(filePath) {
-  const mime = require('mime-types');
   const mimeType = mime.lookup(filePath) || '';
   if (mimeType.startsWith('image/')) return 'image';
   if (mimeType.startsWith('video/')) return 'video';
